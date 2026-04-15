@@ -1,6 +1,6 @@
 const CITIES = {
-  Oakville: { latitude: 43.4675, longitude: -79.6877 },        // Oakville
-  "Downtown Toronto": { latitude: 43.6532, longitude: -79.3832 },    // Downtown Toronto
+  Oakville: { latitude: 43.4675, longitude: -79.6877 },
+  "Downtown Toronto": { latitude: 43.6532, longitude: -79.3832 },
   Burlington: { latitude: 43.3255, longitude: -79.7990 },
   Hamilton: { latitude: 43.2557, longitude: -79.8711 },
   Markham: { latitude: 43.8561, longitude: -79.3370 },
@@ -23,13 +23,13 @@ const METRICS = {
     aggregate: "avg"
   },
   precipitation: {
-    label: "Precipitation",
+    label: "Rain",
     unit: "mm",
     hourlyKey: "precipitation",
     aggregate: "sum"
   },
   wind: {
-    label: "Wind Speed",
+    label: "Wind",
     unit: "km/h",
     hourlyKey: "wind_speed_10m",
     aggregate: "avg"
@@ -44,7 +44,7 @@ const METRICS = {
 
 const state = {
   primaryCity: "Oakville",
-  compareCity: "Campus",
+  compareCity: "Downtown Toronto",
   range: "today",
   metric: "temperature",
   weatherData: {},
@@ -65,6 +65,9 @@ const forecastTable = document.getElementById("forecastTable");
 const lastUpdated = document.getElementById("lastUpdated");
 const errorBox = document.getElementById("errorBox");
 const loadingBox = document.getElementById("loadingBox");
+
+const mainDecision = document.getElementById("mainDecision");
+const mainDecisionReason = document.getElementById("mainDecisionReason");
 
 const rainDecision = document.getElementById("rainDecision");
 const rainReason = document.getElementById("rainReason");
@@ -209,7 +212,8 @@ async function loadWeather() {
 
     updateDashboard();
   } catch (error) {
-    showError(error.message || "Something went wrong while loading weather data.");
+    showError("We couldn’t load the latest weather right now. Try refreshing your route in a moment.");
+    console.error(error);
   } finally {
     showLoading(false);
   }
@@ -221,11 +225,58 @@ function updateDashboard() {
 
   if (!primaryPayload || !comparePayload) return;
 
+  renderMainRecommendation(primaryPayload, comparePayload);
   renderDecisionCards(primaryPayload, comparePayload);
   renderSummaryCards(primaryPayload);
   renderChart(primaryPayload, comparePayload);
   renderForecastTable(primaryPayload);
   renderChartLabels();
+}
+
+function renderMainRecommendation(primaryPayload, comparePayload) {
+  const p = primaryPayload.current;
+  const c = comparePayload.current;
+
+  const rainMax = Math.max(p.precipitation, c.precipitation);
+  const colderTemp = Math.min(p.temperature_2m, c.temperature_2m);
+  const windMax = Math.max(p.wind_speed_10m, c.wind_speed_10m);
+
+  const primaryScore = getDiscomfortScore(p);
+  const compareScore = getDiscomfortScore(c);
+  const scoreGap = Math.abs(primaryScore - compareScore);
+
+  if (rainMax >= 2 || windMax >= 22) {
+    mainDecision.textContent = "Bring rain gear and expect a rougher trip";
+    mainDecisionReason.textContent =
+      "Stronger rain or wind is showing up across your route, so the commute may feel less comfortable than usual.";
+    return;
+  }
+
+  if (colderTemp <= 4) {
+    mainDecision.textContent = "Dress for a colder commute";
+    mainDecisionReason.textContent =
+      "Lower temperatures along your route could make walking, waiting, or transferring less comfortable.";
+    return;
+  }
+
+  if (scoreGap >= 3) {
+    const rougherPlace = primaryScore > compareScore ? state.primaryCity : state.compareCity;
+    mainDecision.textContent = `${rougherPlace} looks tougher right now`;
+    mainDecisionReason.textContent =
+      `Conditions are noticeably harsher in ${rougherPlace}, so this part of your route may shape the overall trip more than usual.`;
+    return;
+  }
+
+  if (rainMax > 0 || windMax >= 14 || colderTemp <= 10) {
+    mainDecision.textContent = "Light prep should be enough";
+    mainDecisionReason.textContent =
+      "The trip still looks manageable, but bringing an extra layer or compact umbrella could make the commute more comfortable.";
+    return;
+  }
+
+  mainDecision.textContent = "Good time to leave";
+  mainDecisionReason.textContent =
+    "Current conditions across your route look manageable, with no major weather differences between where you are leaving from and where you are going.";
 }
 
 function renderDecisionCards(primaryPayload, comparePayload) {
@@ -238,24 +289,24 @@ function renderDecisionCards(primaryPayload, comparePayload) {
 
   if (rainMax >= 1) {
     rainDecision.textContent = "Recommended";
-    rainReason.textContent = "At least one location is showing noticeable precipitation.";
+    rainReason.textContent = "At least one point on your route is showing noticeable precipitation.";
   } else if (rainMax > 0) {
     rainDecision.textContent = "Maybe";
-    rainReason.textContent = "Light precipitation is present, so a compact umbrella could help.";
+    rainReason.textContent = "Light rain is present, so a compact umbrella could still help.";
   } else {
     rainDecision.textContent = "Not needed";
-    rainReason.textContent = "Current precipitation is very low across the selected locations.";
+    rainReason.textContent = "Precipitation is currently very low across your selected route.";
   }
 
   if (colderTemp <= 5 || windMax >= 18) {
     layerDecision.textContent = "Yes";
-    layerReason.textContent = "Cooler temperatures or stronger wind may make the commute less comfortable.";
+    layerReason.textContent = "Cooler temperatures or stronger wind may make the trip less comfortable outdoors.";
   } else if (colderTemp <= 10 || windMax >= 10) {
     layerDecision.textContent = "Maybe";
-    layerReason.textContent = "Conditions are mild, but an extra layer could still help outdoors.";
+    layerReason.textContent = "Conditions are fairly mild, but an extra layer could still help.";
   } else {
     layerDecision.textContent = "Probably not";
-    layerReason.textContent = "Both selected locations look fairly comfortable right now.";
+    layerReason.textContent = "Current conditions across your route look fairly comfortable.";
   }
 
   const primaryScore = getDiscomfortScore(p);
@@ -266,10 +317,10 @@ function renderDecisionCards(primaryPayload, comparePayload) {
     harderReason.textContent = `${state.primaryCity} and ${state.compareCity} feel relatively close right now.`;
   } else if (primaryScore > compareScore) {
     harderLocation.textContent = state.primaryCity;
-    harderReason.textContent = `${state.primaryCity} currently looks less comfortable because of combined wind, rain, or temperature conditions.`;
+    harderReason.textContent = `${state.primaryCity} currently looks less comfortable because of combined rain, wind, or colder temperatures.`;
   } else {
     harderLocation.textContent = state.compareCity;
-    harderReason.textContent = `${state.compareCity} currently looks less comfortable because of combined wind, rain, or temperature conditions.`;
+    harderReason.textContent = `${state.compareCity} currently looks less comfortable because of combined rain, wind, or colder temperatures.`;
   }
 }
 
@@ -284,22 +335,22 @@ function getDiscomfortScore(current) {
 function renderSummaryCards(payload) {
   const cards = [
     {
-      label: "Current temperature",
+      label: "Temperature now",
       value: payload.current.temperature_2m,
       unit: "°C"
     },
     {
-      label: "Current precipitation",
+      label: "Rain right now",
       value: payload.current.precipitation,
       unit: "mm"
     },
     {
-      label: "Current wind speed",
+      label: "Wind right now",
       value: payload.current.wind_speed_10m,
       unit: "km/h"
     },
     {
-      label: "Current cloud cover",
+      label: "Cloud cover now",
       value: payload.current.cloud_cover,
       unit: "%"
     }
@@ -321,14 +372,25 @@ function renderSummaryCards(payload) {
 
 function renderChartLabels() {
   const metricConfig = METRICS[state.metric];
-  chartTitle.textContent = `${metricConfig.label} for ${state.primaryCity}`;
+
+  if (state.metric === "temperature") {
+    chartTitle.textContent = `Temperature between ${state.primaryCity} and ${state.compareCity}`;
+  } else if (state.metric === "precipitation") {
+    chartTitle.textContent = `Rain forecast between ${state.primaryCity} and ${state.compareCity}`;
+  } else if (state.metric === "wind") {
+    chartTitle.textContent = `Wind conditions between ${state.primaryCity} and ${state.compareCity}`;
+  } else {
+    chartTitle.textContent = `Cloud cover between ${state.primaryCity} and ${state.compareCity}`;
+  }
 
   chartSubtitle.textContent =
     state.range === "today"
-      ? "Hourly view for near-term commute and campus decisions"
-      : `Daily view for the next ${state.range === "7d" ? 7 : 14} days`;
+      ? "Near-term conditions for leaving soon"
+      : state.range === "7d"
+      ? "Weekly view for planning ahead"
+      : "Longer-range view for broader planning";
 
-  compareLabel.textContent = `${state.primaryCity} compared with ${state.compareCity}`;
+  compareLabel.textContent = `${state.primaryCity} → ${state.compareCity}`;
 }
 
 function renderChart(primaryPayload, comparePayload) {

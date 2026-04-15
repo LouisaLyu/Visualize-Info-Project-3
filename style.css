@@ -1,7 +1,7 @@
 :root {
-  --bg: #f4f7fb;
-  --card: #e8f1fb;
-  --card-secondary: #dae7f4;
+  --bg: #e8f1fb;
+  --card: #fff;
+  --card-secondary: #fff;
   --border: #c5d2e1;
   --text: #24303d;
   --text-secondary: #556273;
@@ -104,6 +104,41 @@ h1 {
   border: 1px solid var(--accent-secondary);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow);
+}
+
+.main-recommendation {
+  padding: 26px 28px;
+  margin-bottom: 24px;
+  background: #fff;
+  border: 1px solid var(--accent);
+}
+
+.recommendation-copy {
+  max-width: 840px;
+}
+
+.section-kicker {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-hover);
+}
+
+.main-recommendation h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 3vw, 2.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.main-recommendation p {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-secondary);
 }
 
 .decision-strip {
@@ -386,7 +421,7 @@ select:focus {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 520px;
+  min-height: 560px;
 }
 
 .side-column {
@@ -401,7 +436,7 @@ select:focus {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  min-height: 520px;
+  min-height: 560px;
 }
 
 .compact-list {
