@@ -61,7 +61,6 @@ const summaryCards = document.getElementById("summaryCards");
 const chartTitle = document.getElementById("chartTitle");
 const chartSubtitle = document.getElementById("chartSubtitle");
 const compareLabel = document.getElementById("compareLabel");
-const forecastTable = document.getElementById("forecastTable");
 const lastUpdated = document.getElementById("lastUpdated");
 const errorBox = document.getElementById("errorBox");
 const loadingBox = document.getElementById("loadingBox");
@@ -229,7 +228,6 @@ function updateDashboard() {
   renderDecisionCards(primaryPayload, comparePayload);
   renderSummaryCards(primaryPayload);
   renderChart(primaryPayload, comparePayload);
-  renderForecastTable(primaryPayload);
   renderChartLabels();
 }
 
@@ -495,28 +493,6 @@ function renderChart(primaryPayload, comparePayload) {
       }
     }
   });
-}
-
-function renderForecastTable(payload) {
-  const series = buildChartSeries(payload, state.metric, state.range);
-  const metricConfig = METRICS[state.metric];
-  const visibleRows =
-    state.range === "today"
-      ? series.slice(0, 8)
-      : state.range === "7d"
-      ? series.slice(0, 7)
-      : series.slice(0, 10);
-
-  forecastTable.innerHTML = visibleRows
-    .map(row => {
-      return `
-        <div class="table-row">
-          <span>${row.label}</span>
-          <span>${formatNumber(row.value)} ${metricConfig.unit}</span>
-        </div>
-      `;
-    })
-    .join("");
 }
 
 function buildChartSeries(payload, metricKey, rangeKey) {
