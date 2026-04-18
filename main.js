@@ -232,6 +232,8 @@ function updateDashboard() {
 }
 
 function renderMainRecommendation(primaryPayload, comparePayload) {
+  if (!mainDecision || !mainDecisionReason) return;
+
   const p = primaryPayload.current;
   const c = comparePayload.current;
 
@@ -333,22 +335,22 @@ function getDiscomfortScore(current) {
 function renderSummaryCards(payload) {
   const cards = [
     {
-      label: "Temperature now",
+      label: "Temperature",
       value: payload.current.temperature_2m,
       unit: "°C"
     },
     {
-      label: "Rain right now",
+      label: "Rain",
       value: payload.current.precipitation,
       unit: "mm"
     },
     {
-      label: "Wind right now",
+      label: "Wind",
       value: payload.current.wind_speed_10m,
       unit: "km/h"
     },
     {
-      label: "Cloud cover now",
+      label: "Cloud cover",
       value: payload.current.cloud_cover,
       unit: "%"
     }
@@ -388,7 +390,9 @@ function renderChartLabels() {
       ? "Weekly view for planning ahead"
       : "Longer-range view for broader planning";
 
-  compareLabel.textContent = `${state.primaryCity} → ${state.compareCity}`;
+  if (compareLabel) {
+    compareLabel.textContent = `${state.primaryCity} → ${state.compareCity}`;
+  }
 }
 
 function renderChart(primaryPayload, comparePayload) {
